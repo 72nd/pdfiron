@@ -78,6 +78,19 @@ impl Run {
         };
         self
     }
+
+    /// Sets whether to run tesseract or not.
+    pub fn do_tesseract(&mut self, do_tesseract: bool) -> &mut Self {
+        self.do_tesseract = do_tesseract;
+        self
+    }
+
+    /// Sets whether to run unpaper or not.
+    pub fn do_unpaper(&mut self, do_unpaper: bool) -> &mut Self {
+        self.do_unpaper = do_unpaper;
+        self
+    }
+
     /// Initializes the instance and creates the temporary folder. If no output path was specified,
     /// it will be determined depending on the input path: The output will be placed in the same
     /// folder and with `-ironed` as suffix. The function also creates a temporary folder for the

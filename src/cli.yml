@@ -12,7 +12,7 @@ args:
         long: convert-options, co
         takes_value: true
     - debug:
-        help: enable debug mode
+        help: do not delete the temporary folder on exit
         long: debug
         short: d
     - disable-unpaper:
@@ -74,4 +74,8 @@ args:
         help: name of the unpaper binary
         long: unpaper-exec, ue
         takes_value: true
+    - verbose:
+        help: output debug output
+        long: verbose
+        short: v
 

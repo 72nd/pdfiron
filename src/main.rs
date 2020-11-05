@@ -30,6 +30,8 @@ fn main() {
 fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
     let _run = run::Run::new(matches.value_of("INPUT").unwrap())?
         .output(matches.value_of("output"))
+        .do_tesseract(matches.is_present("do_tesseract"))
+        .do_unpaper(matches.is_present("do_unpaper"))
         .init();
     Ok(())
 }
