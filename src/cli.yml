@@ -3,10 +3,6 @@ version: "1.0.0"
 author: 72nd <msg@frg72.com>
 about: enhance scanned PDF's
 args:
-    - convert-binary:
-        help: name of the convert binary
-        long: convert-binary, cb
-        takes_value: true
     - convert-options:
         help: additional options for convert
         long: convert-options, co
@@ -25,6 +21,8 @@ args:
         help: use grayscale
         long: gray
         short: g
+        conflicts_with:
+            - rgb
     - INPUT:
         help: path to input file
         required: true
@@ -62,21 +60,18 @@ args:
         long: resolution
         default_value: "300"
         takes_value: true
+    - rgb:
+        help: use rgb
+        long: rgb
+        conflicts_with:
+            - gray
     - step:
         help: Wait between steps enabling the user to alter the working files
         long: step
         short: s
-    - tesseract-binary:
-        help: name of the tesseract binary
-        long: tesseract-binary, tb
-        takes_value: true
     - tesseract-options:
         help: optional options for tesseract
         long: tesseract-options, to
-        takes_value: true
-    - unpaper-binary:
-        help: name of the unpaper binary
-        long: unpaper-binary, ub
         takes_value: true
     - verbose:
         help: print debug output and stdout of called commands

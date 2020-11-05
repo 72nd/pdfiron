@@ -39,7 +39,7 @@ pub fn run_cmd<'a>(
                 return Err(ErrorMessage::new(format!(
                     "Execution of {} failed {}",
                     cmd_name,
-                    match String::from_utf8(x.stdout) {
+                    match String::from_utf8(x.stderr) {
                         Ok(x) => x,
                         Err(_) => String::from("<Error converting stderr to string>"),
                     }
@@ -83,7 +83,7 @@ impl Stepper {
     /// Needs the path to the temporary folder.
     pub fn log_folder_path(&self, folder: PathBuf) {
         match self.0 {
-            true => info!("file operations will be happening in {}", folder.display()),
+            true => info!("File operations will be happening in {}", folder.display()),
             false => debug!("temporary folder is {}", folder.display()),
         }
     }
@@ -93,20 +93,18 @@ impl Stepper {
     /// further investigation. The log-level depends whether the stepper is enabled or not. Active
     /// it's info, otherwise it's debug.
     pub fn log_step<S: Into<String>>(&self, desc: S) {
-        let msg = format!("About to {}", desc.into());
         match self.0 {
-            true => info!("{}", msg),
-            false => debug!("{}", msg),
+            true => info!("{}...", desc.into()),
+            false => debug!("{}...", desc.into()),
         }
     }
 
     /// If the step mode was enabled the method will wait until user hits enter. This is used for
     /// the pause between steps mode. Allowing the user to tweak the files in the temporary folder
     pub fn wait(&self) {
-        println!("lj");
         match self.0 {
             true => {
-                print!("Hit enter to proceed with next step...",);
+                print!("Hit enter to proceed with next step...");
                 let mut void = String::new();
                 match io::stdin().read_line(&mut void) {
                     Ok(_) => {}

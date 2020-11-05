@@ -3,22 +3,21 @@ use crate::error::ErrorMessage;
 use crate::util::{self, Stepper};
 
 use std::env;
+use std::ffi::OsStr;
 use std::fs::{self};
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use shellexpand;
 use tempfile::{Builder, TempDir};
 
 /// Name of the start file in the temporary folder.
 const START_PDF: &str = "input.pdf";
-/// Name of environment variable to specify the convert binary.
-const CONVERT_ENV: &str = "CONVERT_BIN";
-/// Name of argument to specify the convert binary.
-const CONVERT_ARG: &str = "convert-binary";
-/// Name of environment variable to specify the unpaper binary.
-const UNPAPER_ENV: &str = "UNPAPER_BIN";
-/// Name of environment variable to specify the tesseract binary.
-const TESSERACT_ENV: &str = "TESSERACT_ENV";
+/// Binary name of convert.
+const CONVERT_BINARY: &str = "convert";
+/// Output file definition for PDF to images conversion.
+const CONVERT_OUTPUT: &str = "a_%03d";
 
 /// This struct contains all the needed information and states to go trough the different
 /// conversion steps.
@@ -72,15 +71,6 @@ impl Run {
         self
     }
 
-    /// Sets the optional parameters for the convert call.
-    pub fn convert_options<S: Into<String>>(&mut self, opt: Option<S>) -> &mut Self {
-        self.convert_options = match opt {
-            Some(x) => Some(x.into().split(" ").map(|x| x.to_string()).collect()),
-            None => None,
-        };
-        self
-    }
-
     /// Sets whether to run tesseract or not.
     pub fn do_tesseract(&mut self, do_tesseract: bool) -> &mut Self {
         self.do_tesseract = do_tesseract;
@@ -93,10 +83,9 @@ impl Run {
         self
     }
 
-    /// Initializes the instance and creates the temporary folder. The input PDF is copied into the
-    /// folder and the pages are extracted to images from the document. Takes an optional name of
-    /// the convert binary (specify by the command line argument).
-    pub fn init(&mut self, convert_binary: Option<&str>) -> Result<(), ErrorMessage> {
+    /// Initializes the instance and creates the temporary folder. The input PDF is copied into
+    /// this folder.
+    pub fn init(&mut self) -> Result<(), ErrorMessage> {
         let folder = match Builder::new().prefix("pdfiron-").tempdir() {
             Ok(x) => x,
             Err(e) => {
@@ -108,30 +97,104 @@ impl Run {
         };
         self.stepper.log_folder_path(folder.path().to_path_buf());
 
-        let in_dst = folder.path().join(START_PDF);
+        self.folder = Some(folder);
+        let in_dst = self.append_to_temp(START_PDF);
         debug!("copy {} to {}", self.input.display(), in_dst.display());
         match fs::copy(&self.input, &in_dst) {
-            Ok(_) => {}
-            Err(e) => {
-                return Err(ErrorMessage::new(format!(
-                    "Couldn't copy input file to {}, {}",
-                    in_dst.display(),
-                    e
-                )))
-            }
+            Ok(_) => Ok(()),
+            Err(e) => Err(ErrorMessage::new(format!(
+                "Couldn't copy input file to {}, {}",
+                in_dst.display(),
+                e
+            ))),
+        }
+    }
+
+    /// The pages of the input document are extracted to images from the document. Takes an
+    /// optional name of the convert binary (specify by the command line argument).
+    pub fn convert_to_img<'a>(
+        &self,
+        use_gray: bool,
+        use_rgb: bool,
+        resolution: Option<&'a str>,
+        options: Option<&'a str>,
+    ) -> Result<(), ErrorMessage> {
+        self.stepper.log_step("Extracting images form input PDF");
+
+        let mut cmd = Command::new(CONVERT_BINARY);
+        cmd.arg("-units").arg("PixelsPerInch");
+
+        // Color mode
+        match (use_gray, use_rgb) {
+            (true, false) => cmd
+                .arg("-colorspace")
+                .arg("gray")
+                .arg("-depth")
+                .arg("8")
+                .arg("-background")
+                .arg("white")
+                .arg("-flatten")
+                .arg("-alpha")
+                .arg("Off"),
+            (false, true) => cmd
+                .arg("-depth")
+                .arg("8")
+                .arg("-background")
+                .arg("white")
+                .arg("flatten")
+                .arg("alpha")
+                .arg("Off")
+                .arg("-density"),
+            (_, _) => cmd.arg("-type").arg("Bilevel"),
         };
 
-        self.stepper.log_step("extract images form input PDF");
-        util::run_cmd("convert", CONVERT_ARG, convert_binary, CONVERT_ENV, vec![])?;
-        
+        // Density
+        let res = match resolution {
+            Some(x) => match x.parse::<u64>() {
+                Ok(x) => x,
+                Err(_) => {
+                    return Err(ErrorMessage::new(
+                        "Invalid resolution argument, has to be positive int",
+                    ))
+                }
+            },
+            None => 300 as u64,
+        };
+        cmd.arg("-density").arg(format!("{}x{}", res, res));
+
+        // Optional arguments
+        cmd.args(match options {
+            Some(x) => x.split(" ").collect::<Vec<&str>>(),
+            None => vec![],
+        });
+
+        // Input and output
+        cmd.arg(self.append_to_temp(START_PDF))
+            .arg(self.append_to_temp(
+                &format!(
+                    "{}.{}",
+                    CONVERT_OUTPUT,
+                    match (use_gray, use_rgb) {
+                        (true, false) => "pgm",
+                        (false, true) => "ppm",
+                        (_, _) => "pbm",
+                    }
+                )[..],
+            ));
+
+        run_cmd(cmd, CONVERT_BINARY)?;
         self.stepper.wait();
-        self.folder = Some(folder);
         Ok(())
+    }
+
+    /// Returns the path to the temporary folder with some path appended.
+    fn append_to_temp<'a, S: Into<&'a str>>(&self, path: S) -> PathBuf {
+        self.folder.as_ref().unwrap().path().join(path.into())
     }
 
     /// Returns the output path based on the absolute input path. Folder stays the same,
     /// the suffix -ironed is added to the filename.
-    fn default_output_paht(&self) -> PathBuf {
+    fn default_output_path(&self) -> PathBuf {
         let mut rsl = PathBuf::new();
         rsl.push(self.input.parent().unwrap());
         let name = self.input.file_name().unwrap().to_string_lossy();
@@ -193,6 +256,45 @@ impl Run {
             ))),
         }
     }
+}
+
+/// Runs a Command and handles the outcome of it.
+fn run_cmd<'a>(mut cmd: Command, cmd_name: &'a str) -> Result<(), ErrorMessage> {
+    match cmd.output() {
+        Ok(x) => match x.status.success() {
+            true => debug!(
+                "{}",
+                match String::from_utf8(x.stdout) {
+                    Ok(x) => x,
+                    Err(_) => String::from("<Error converting stdout to string>"),
+                }
+            ),
+            false => {
+                return Err(ErrorMessage::new(format!(
+                    "Execution of {} failed {}",
+                    cmd_name,
+                    match String::from_utf8(x.stderr) {
+                        Ok(x) => x,
+                        Err(_) => String::from("<Error converting stderr to string>"),
+                    }
+                )))
+            }
+        },
+        Err(e) => {
+            if let ErrorKind::NotFound = e.kind() {
+                return Err(ErrorMessage::new(format!(
+                    "couldn't find the convert binary ({}) on your system",
+                    cmd_name,
+                )));
+            } else {
+                return Err(ErrorMessage::new(format!(
+                    "Failed to call {}, {}",
+                    cmd_name, e
+                )));
+            }
+        }
+    }
+    Ok(())
 }
 
 // If no output path was specified,
