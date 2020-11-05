@@ -6,26 +6,8 @@ use std::io::{self, ErrorKind};
 use std::path::PathBuf;
 use std::process::{Command, Output};
 
-/// Runs a specific command. Takes the default name, the command line argument name and the
-/// environment variable to alter the default. The precedence for choosing the name is cli-argument
-/// over content of environment variable over default.
-pub fn run_cmd<'a>(
-    default_name: &'a str,
-    arg_name: &'a str,
-    arg_content: Option<&str>,
-    env_key: &'a str,
-    args: Vec<String>,
-) -> Result<(), ErrorMessage> {
-    let (cmd_name, binary_method) = match arg_content {
-        Some(x) => (x.into(), ExecutableNameMethod::Arg),
-        None => match env::var(env_key) {
-            Ok(x) => (x, ExecutableNameMethod::Env),
-            Err(_) => (default_name.to_string(), ExecutableNameMethod::Def),
-        },
-    };
-
-    let mut cmd = Command::new(&cmd_name);
-    cmd.args(args);
+/// Runs a Command and handles the outcome of it.
+pub fn run_cmd<'a>(mut cmd: Command, cmd_name: &'a str) -> Result<(), ErrorMessage> {
     match cmd.output() {
         Ok(x) => match x.status.success() {
             true => debug!(
@@ -48,12 +30,9 @@ pub fn run_cmd<'a>(
         },
         Err(e) => {
             if let ErrorKind::NotFound = e.kind() {
-                return Err(ErrorMessage::from(ExecutableNotFound::new(
-                    default_name.to_string(),
-                    arg_name.to_string(),
-                    env_key.to_string(),
+                return Err(ErrorMessage::new(format!(
+                    "couldn't find the convert binary ({}) on your system",
                     cmd_name,
-                    binary_method,
                 )));
             } else {
                 return Err(ErrorMessage::new(format!(
@@ -104,7 +83,7 @@ impl Stepper {
     pub fn wait(&self) {
         match self.0 {
             true => {
-                print!("Hit enter to proceed with next step...");
+                println!("Hit enter to proceed with next step...");
                 let mut void = String::new();
                 match io::stdin().read_line(&mut void) {
                     Ok(_) => {}

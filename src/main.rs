@@ -1,3 +1,4 @@
+mod convert;
 mod error;
 mod run;
 mod util;
@@ -29,17 +30,13 @@ fn main() {
 
 /// Does the conversion.
 fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
-    let mut run = run::Run::new(
+    let run = run::Run::new(
         matches.value_of("INPUT").unwrap(),
         matches.is_present("step"),
     )?;
-    run.output(matches.value_of("output"))
-        .do_tesseract(matches.is_present("do_tesseract"))
-        .do_unpaper(matches.is_present("do_unpaper"));
 
-    run.init()?;
-
-    run.convert_to_img(
+    convert::execute(
+        &run,
         matches.is_present("gray"),
         matches.is_present("rgb"),
         matches.value_of("resolution"),

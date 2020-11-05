@@ -1,41 +1,31 @@
-/// The actual work.
 use crate::error::ErrorMessage;
-use crate::util::{self, Stepper};
+use crate::util::Stepper;
 
 use std::env;
-use std::ffi::OsStr;
 use std::fs::{self};
 use std::io::ErrorKind;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process::Command;
 
 use shellexpand;
 use tempfile::{Builder, TempDir};
 
 /// Name of the start file in the temporary folder.
-const START_PDF: &str = "input.pdf";
-/// Binary name of convert.
-const CONVERT_BINARY: &str = "convert";
+pub const START_PDF: &str = "input.pdf";
 /// Output file definition for PDF to images conversion.
-const CONVERT_OUTPUT: &str = "a_%03d";
+pub const CONVERT_OUTPUT: &str = "a_%03d";
 
 /// This struct contains all the needed information and states to go trough the different
-/// conversion steps.
+/// conversion steps. The object manages the temporary folder.
 pub struct Run {
     /// Absolute path to the input file.
     input: PathBuf,
     /// Absolute path to the output file.
     output: Option<PathBuf>,
     /// Temporary folder where the conversion happens.
-    folder: Option<TempDir>,
-    /// Optional parameters for the convert call.
-    convert_options: Option<Vec<String>>,
-    /// Whether to run tesseract-ocr or not.
-    do_tesseract: bool,
-    /// Whether to run unpaper or not.
-    do_unpaper: bool,
+    folder: TempDir,
     /// Stepper to pause the execution between the steps if needed.
-    stepper: Stepper,
+    pub stepper: Stepper,
 }
 
 impl Run {
@@ -50,58 +40,28 @@ impl Run {
     pub fn new<S: Into<String>>(input: S, do_step: bool) -> Result<Self, ErrorMessage> {
         let input = Run::expand_input_path(input.into())?;
         Run::validate_input_file(&input)?;
-        Ok(Self {
+
+        let rsl = Self {
             input: input.clone(),
             output: None,
-            folder: None,
-            convert_options: None,
-            do_tesseract: false,
-            do_unpaper: false,
+            folder: match Builder::new().prefix("pdfiron-").tempdir() {
+                Ok(x) => x,
+                Err(e) => {
+                    return Err(ErrorMessage::new(format!(
+                        "Couldn't create temp folder, {}",
+                        e
+                    )))
+                }
+            },
             stepper: Stepper::new(do_step),
-        })
-    }
-
-    /// Sets a specific output file for the conversion. If no output is specified by using this
-    /// method the init() method will use a default path based on the input path.
-    pub fn output<S: Into<String>>(&mut self, output: Option<S>) -> &mut Self {
-        match output {
-            Some(x) => self.output = Some(Path::new(&x.into()).to_path_buf()),
-            None => {}
         };
-        self
-    }
 
-    /// Sets whether to run tesseract or not.
-    pub fn do_tesseract(&mut self, do_tesseract: bool) -> &mut Self {
-        self.do_tesseract = do_tesseract;
-        self
-    }
+        rsl.stepper.log_folder_path(rsl.folder.path().to_path_buf());
 
-    /// Sets whether to run unpaper or not.
-    pub fn do_unpaper(&mut self, do_unpaper: bool) -> &mut Self {
-        self.do_unpaper = do_unpaper;
-        self
-    }
-
-    /// Initializes the instance and creates the temporary folder. The input PDF is copied into
-    /// this folder.
-    pub fn init(&mut self) -> Result<(), ErrorMessage> {
-        let folder = match Builder::new().prefix("pdfiron-").tempdir() {
-            Ok(x) => x,
-            Err(e) => {
-                return Err(ErrorMessage::new(format!(
-                    "Couldn't create temp folder, {}",
-                    e
-                )))
-            }
-        };
-        self.stepper.log_folder_path(folder.path().to_path_buf());
-
-        self.folder = Some(folder);
-        let in_dst = self.append_to_temp(START_PDF);
-        debug!("copy {} to {}", self.input.display(), in_dst.display());
-        match fs::copy(&self.input, &in_dst) {
-            Ok(_) => Ok(()),
+        let in_dst = rsl.prepend_with_temp_folder(START_PDF);
+        debug!("copy {} to {}", input.display(), in_dst.display());
+        match fs::copy(&input, &in_dst) {
+            Ok(_) => Ok(rsl),
             Err(e) => Err(ErrorMessage::new(format!(
                 "Couldn't copy input file to {}, {}",
                 in_dst.display(),
@@ -110,86 +70,9 @@ impl Run {
         }
     }
 
-    /// The pages of the input document are extracted to images from the document. Takes an
-    /// optional name of the convert binary (specify by the command line argument).
-    pub fn convert_to_img<'a>(
-        &self,
-        use_gray: bool,
-        use_rgb: bool,
-        resolution: Option<&'a str>,
-        options: Option<&'a str>,
-    ) -> Result<(), ErrorMessage> {
-        self.stepper.log_step("Extracting images form input PDF");
-
-        let mut cmd = Command::new(CONVERT_BINARY);
-        cmd.arg("-units").arg("PixelsPerInch");
-
-        // Color mode
-        match (use_gray, use_rgb) {
-            (true, false) => cmd
-                .arg("-colorspace")
-                .arg("gray")
-                .arg("-depth")
-                .arg("8")
-                .arg("-background")
-                .arg("white")
-                .arg("-flatten")
-                .arg("-alpha")
-                .arg("Off"),
-            (false, true) => cmd
-                .arg("-depth")
-                .arg("8")
-                .arg("-background")
-                .arg("white")
-                .arg("flatten")
-                .arg("alpha")
-                .arg("Off")
-                .arg("-density"),
-            (_, _) => cmd.arg("-type").arg("Bilevel"),
-        };
-
-        // Density
-        let res = match resolution {
-            Some(x) => match x.parse::<u64>() {
-                Ok(x) => x,
-                Err(_) => {
-                    return Err(ErrorMessage::new(
-                        "Invalid resolution argument, has to be positive int",
-                    ))
-                }
-            },
-            None => 300 as u64,
-        };
-        cmd.arg("-density").arg(format!("{}x{}", res, res));
-
-        // Optional arguments
-        cmd.args(match options {
-            Some(x) => x.split(" ").collect::<Vec<&str>>(),
-            None => vec![],
-        });
-
-        // Input and output
-        cmd.arg(self.append_to_temp(START_PDF))
-            .arg(self.append_to_temp(
-                &format!(
-                    "{}.{}",
-                    CONVERT_OUTPUT,
-                    match (use_gray, use_rgb) {
-                        (true, false) => "pgm",
-                        (false, true) => "ppm",
-                        (_, _) => "pbm",
-                    }
-                )[..],
-            ));
-
-        run_cmd(cmd, CONVERT_BINARY)?;
-        self.stepper.wait();
-        Ok(())
-    }
-
     /// Returns the path to the temporary folder with some path appended.
-    fn append_to_temp<'a, S: Into<&'a str>>(&self, path: S) -> PathBuf {
-        self.folder.as_ref().unwrap().path().join(path.into())
+    pub fn prepend_with_temp_folder<'a, S: Into<&'a str>>(&self, path: S) -> PathBuf {
+        self.folder.path().join(path.into())
     }
 
     /// Returns the output path based on the absolute input path. Folder stays the same,
@@ -256,45 +139,6 @@ impl Run {
             ))),
         }
     }
-}
-
-/// Runs a Command and handles the outcome of it.
-fn run_cmd<'a>(mut cmd: Command, cmd_name: &'a str) -> Result<(), ErrorMessage> {
-    match cmd.output() {
-        Ok(x) => match x.status.success() {
-            true => debug!(
-                "{}",
-                match String::from_utf8(x.stdout) {
-                    Ok(x) => x,
-                    Err(_) => String::from("<Error converting stdout to string>"),
-                }
-            ),
-            false => {
-                return Err(ErrorMessage::new(format!(
-                    "Execution of {} failed {}",
-                    cmd_name,
-                    match String::from_utf8(x.stderr) {
-                        Ok(x) => x,
-                        Err(_) => String::from("<Error converting stderr to string>"),
-                    }
-                )))
-            }
-        },
-        Err(e) => {
-            if let ErrorKind::NotFound = e.kind() {
-                return Err(ErrorMessage::new(format!(
-                    "couldn't find the convert binary ({}) on your system",
-                    cmd_name,
-                )));
-            } else {
-                return Err(ErrorMessage::new(format!(
-                    "Failed to call {}, {}",
-                    cmd_name, e
-                )));
-            }
-        }
-    }
-    Ok(())
 }
 
 // If no output path was specified,
