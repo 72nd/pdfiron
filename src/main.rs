@@ -1,8 +1,6 @@
 mod error;
 mod run;
 
-use std::error::Error;
-
 #[macro_use]
 extern crate log;
 
@@ -13,7 +11,6 @@ use clap::{App, ArgMatches};
 fn main() {
     let yaml = load_yaml!("cli.yml");
     let matches = App::from(yaml).get_matches();
-    
     env_logger::Builder::new()
         .filter(
             None,
@@ -23,16 +20,16 @@ fn main() {
             },
         )
         .init();
-    convert(matches);
+    match convert(matches) {
+        Ok(_) => {}
+        Err(e) => error!("{}", e),
+    };
 }
 
 /// Does the conversion.
-fn convert(matches: ArgMatches) {
-    let _run = match run::Run::new(matches.value_of("INPUT").unwrap(), matches.value_of("output")) {
-        Ok(x) => x,
-        Err(e) => {
-            error!("{}", e);
-            return
-        },
-    };
+fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
+    let _run = run::Run::new(matches.value_of("INPUT").unwrap())?
+        .output(matches.value_of("output"))
+        .init();
+    Ok(())
 }
