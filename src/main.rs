@@ -1,3 +1,5 @@
+mod error;
+
 #[macro_use]
 extern crate log;
 
@@ -18,5 +20,5 @@ fn main() {
             },
         )
         .init();
-
+    let _err = error::GenericError::new("hoi");
 }
