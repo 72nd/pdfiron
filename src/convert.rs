@@ -16,7 +16,7 @@ pub fn execute<'a>(
     resolution: Option<&'a str>,
     options: Option<&'a str>,
 ) -> Result<(), ErrorMessage> {
-    run.stepper.log_step("Extracting images form input PDF");
+    run.log_step("Extracting images form input PDF");
 
     let mut cmd = Command::new(CONVERT_BINARY);
     cmd.arg("-units").arg("PixelsPerInch");
@@ -80,6 +80,6 @@ pub fn execute<'a>(
         ));
 
     util::run_cmd(cmd, CONVERT_BINARY)?;
-    run.stepper.wait();
+    run.wait();
     Ok(())
 }

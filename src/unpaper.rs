@@ -17,6 +17,6 @@ pub fn execute<'a>(
     output_pages: Option<&'a str>,
     options: Option<&'a str>,
 ) -> Result<(), ErrorMessage> {
-    run.stepper.log_step(
+    // run.log_step(
     Ok(())
 }
