@@ -1,9 +1,8 @@
 use crate::error::ErrorMessage;
-use crate::util::Stepper;
 
 use std::env;
 use std::fs::{self};
-use std::io::ErrorKind;
+use std::io::{stdin, ErrorKind};
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -24,8 +23,9 @@ pub struct Run {
     output: Option<PathBuf>,
     /// Temporary folder where the conversion happens.
     folder: TempDir,
-    /// Stepper to pause the execution between the steps if needed.
-    pub stepper: Stepper,
+    /// Provides a comfortable way to pause between the steps if the user did enable the function.
+    /// Contains a boolean whether the wait should be executed or not.
+    do_step: bool,
 }
 
 impl Run {
@@ -53,10 +53,10 @@ impl Run {
                     )))
                 }
             },
-            stepper: Stepper::new(do_step),
+            do_step: do_step,
         };
 
-        rsl.stepper.log_folder_path(rsl.folder.path().to_path_buf());
+        rsl.log_folder_path(rsl.folder.path().to_path_buf());
 
         let in_dst = rsl.prepend_with_temp_folder(START_PDF);
         debug!("copy {} to {}", input.display(), in_dst.display());
@@ -73,6 +73,44 @@ impl Run {
     /// Returns the path to the temporary folder with some path appended.
     pub fn prepend_with_temp_folder<'a, S: Into<&'a str>>(&self, path: S) -> PathBuf {
         self.folder.path().join(path.into())
+    }
+
+    /// Outputs the path of the temporary folder to the user via the debug facility. This enables
+    /// the user to find the correct temporary working folder. If the Stepper is disabled, the path
+    /// will be outputted on Debug level thus only be visible when the verbose mode is enabled.
+    /// Needs the path to the temporary folder.
+    pub fn log_folder_path(&self, folder: PathBuf) {
+        match self.do_step {
+            true => info!("File operations will be happening in {}", folder.display()),
+            false => debug!("temporary folder is {}", folder.display()),
+        }
+    }
+
+    /// The method logs the given step description. This helps the user to determine which steps
+    /// was executed and thus when to look at the files and when to skip a pause without any
+    /// further investigation. The log-level depends whether the stepper is enabled or not. Active
+    /// it's info, otherwise it's debug.
+    pub fn log_step<S: Into<String>>(&self, desc: S) {
+        match self.do_step {
+            true => info!("{}...", desc.into()),
+            false => debug!("{}...", desc.into()),
+        }
+    }
+
+    /// If the step mode was enabled the method will wait until user hits enter. This is used for
+    /// the pause between steps mode. Allowing the user to tweak the files in the temporary folder
+    pub fn wait(&self) {
+        match self.do_step {
+            true => {
+                println!("Hit enter to proceed with next step...");
+                let mut void = String::new();
+                match stdin().read_line(&mut void) {
+                    Ok(_) => {}
+                    Err(e) => error!("couldn't read line, {}", e),
+                }
+            }
+            false => {}
+        }
     }
 
     /// Returns the output path based on the absolute input path. Folder stays the same,
@@ -145,3 +183,4 @@ impl Run {
 // it will be determined depending on the input path: The output will be placed in the same
 // folder and with `-ironed` as suffix. The function also creates a temporary folder for the
 // file operations and copies the input PDF file into this location as `input.pdf`.
+//

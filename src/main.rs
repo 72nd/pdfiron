@@ -1,6 +1,7 @@
 mod convert;
 mod error;
 mod run;
+mod unpaper;
 mod util;
 
 #[macro_use]

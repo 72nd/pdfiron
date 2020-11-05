@@ -73,6 +73,10 @@ args:
         help: optional options for tesseract
         long: tesseract-options, to
         takes_value: true
+    - unpaper-options:
+        help: optional options for unpaper
+        long: unpaper-options, uo
+        takes_value: true
     - verbose:
         help: print debug output and stdout of called commands
         long: verbose

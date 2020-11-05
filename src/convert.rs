@@ -4,7 +4,7 @@ use crate::util;
 
 use std::process::Command;
 
-/// Binary name of convert.
+/// Name of the convert binary.
 const CONVERT_BINARY: &str = "convert";
 
 /// The pages of the input document are extracted to images from the document. Takes an
