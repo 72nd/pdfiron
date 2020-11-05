@@ -3,9 +3,9 @@ version: "1.0.0"
 author: 72nd <msg@frg72.com>
 about: enhance scanned PDF's
 args:
-    - convert-exec:
+    - convert-binary:
         help: name of the convert binary
-        long: convert-exec, ce
+        long: convert-binary, cb
         takes_value: true
     - convert-options:
         help: additional options for convert
@@ -62,20 +62,24 @@ args:
         long: resolution
         default_value: "300"
         takes_value: true
-    - tesseract-exec:
+    - step:
+        help: Wait between steps enabling the user to alter the working files
+        long: step
+        short: s
+    - tesseract-binary:
         help: name of the tesseract binary
-        long: tesseract-exec, te
+        long: tesseract-binary, tb
         takes_value: true
     - tesseract-options:
         help: optional options for tesseract
         long: tesseract-options, to
         takes_value: true
-    - unpaper-exec:
+    - unpaper-binary:
         help: name of the unpaper binary
-        long: unpaper-exec, ue
+        long: unpaper-binary, ub
         takes_value: true
     - verbose:
-        help: output debug output
+        help: print debug output and stdout of called commands
         long: verbose
         short: v
 

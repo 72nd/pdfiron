@@ -29,11 +29,17 @@ fn main() {
 
 /// Does the conversion.
 fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
-    let _run = run::Run::new(matches.value_of("INPUT").unwrap())?
-        .output(matches.value_of("output"))
-        .convert_options(matches.value_of("convert_options"))
-        .do_tesseract(matches.is_present("do_tesseract"))
-        .do_unpaper(matches.is_present("do_unpaper"))
-        .init();
+    let _run = run::Run::new(
+        matches.value_of("INPUT").unwrap(),
+        matches.is_present("step"),
+    )?
+    .output(matches.value_of("output"))
+    .convert_options(matches.value_of("convert_options"))
+    .do_tesseract(matches.is_present("do_tesseract"))
+    .do_unpaper(matches.is_present("do_unpaper"))
+    .init(matches.value_of("convert-binary"))?;
+
+
+
     Ok(())
 }

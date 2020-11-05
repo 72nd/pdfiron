@@ -1,5 +1,6 @@
 /// The actual work.
 use crate::error::ErrorMessage;
+use crate::util::{self, Stepper};
 
 use std::env;
 use std::fs::{self};
@@ -10,6 +11,14 @@ use tempfile::{Builder, TempDir};
 
 /// Name of the start file in the temporary folder.
 const START_PDF: &str = "input.pdf";
+/// Name of environment variable to specify the convert binary.
+const CONVERT_ENV: &str = "CONVERT_BIN";
+/// Name of argument to specify the convert binary.
+const CONVERT_ARG: &str = "convert-binary";
+/// Name of environment variable to specify the unpaper binary.
+const UNPAPER_ENV: &str = "UNPAPER_BIN";
+/// Name of environment variable to specify the tesseract binary.
+const TESSERACT_ENV: &str = "TESSERACT_ENV";
 
 /// This struct contains all the needed information and states to go trough the different
 /// conversion steps.
@@ -26,6 +35,8 @@ pub struct Run {
     do_tesseract: bool,
     /// Whether to run unpaper or not.
     do_unpaper: bool,
+    /// Stepper to pause the execution between the steps if needed.
+    stepper: Stepper,
 }
 
 impl Run {
@@ -33,13 +44,13 @@ impl Run {
     /// path will get shell-expanded and normalized as absolute path relative to the current
     /// working directory. The shell-expansion enables the usage of the tilde (`~`) as abbreviation
     /// of the home folder and environment variables. The existence of the input file is tested.
+    /// The `do_step` states whether to pause between the steps.
     ///
     /// To modify the object further use the build pattern and finish the configuration with
     /// init().
-    pub fn new<S: Into<String>>(input: S) -> Result<Self, ErrorMessage> {
+    pub fn new<S: Into<String>>(input: S, do_step: bool) -> Result<Self, ErrorMessage> {
         let input = Run::expand_input_path(input.into())?;
         Run::validate_input_file(&input)?;
-
         Ok(Self {
             input: input.clone(),
             output: None,
@@ -47,6 +58,7 @@ impl Run {
             convert_options: None,
             do_tesseract: false,
             do_unpaper: false,
+            stepper: Stepper::new(do_step),
         })
     }
 
@@ -82,8 +94,9 @@ impl Run {
     }
 
     /// Initializes the instance and creates the temporary folder. The input PDF is copied into the
-    /// folder and the pages are extracted to images from the document.
-    pub fn init(&mut self) -> Result<(), ErrorMessage> {
+    /// folder and the pages are extracted to images from the document. Takes an optional name of
+    /// the convert binary (specify by the command line argument).
+    pub fn init(&mut self, convert_binary: Option<&str>) -> Result<(), ErrorMessage> {
         let folder = match Builder::new().prefix("pdfiron-").tempdir() {
             Ok(x) => x,
             Err(e) => {
@@ -93,7 +106,7 @@ impl Run {
                 )))
             }
         };
-        debug!("created new temporary folder {}", folder.path().display());
+        self.stepper.log_folder_path(folder.path().to_path_buf());
 
         let in_dst = folder.path().join(START_PDF);
         debug!("copy {} to {}", self.input.display(), in_dst.display());
@@ -108,6 +121,10 @@ impl Run {
             }
         };
 
+        self.stepper.log_step("extract images form input PDF");
+        util::run_cmd("convert", CONVERT_ARG, convert_binary, CONVERT_ENV, vec![])?;
+        
+        self.stepper.wait();
         self.folder = Some(folder);
         Ok(())
     }

@@ -30,6 +30,13 @@ impl fmt::Debug for ErrorMessage {
 
 impl Error for ErrorMessage {}
 
+/// Defines the used method of obtaining the name of a binary.
+pub enum ExecutableNameMethod {
+    Def,
+    Env,
+    Arg,
+}
+
 /// Error when an needed executable was not found on the system. Informs the user also the
 /// possibilities to set an alternative name via a command line argument and/or an environment
 /// variable.
@@ -42,28 +49,54 @@ pub struct ExecutableNotFound {
     env: String,
     /// Binary name used while the error occurred.
     used: String,
+    /// Method used to obtaining the name of the executable.
+    method: ExecutableNameMethod,
 }
 
 impl ExecutableNotFound {
     /// Returns a new ExecutableNotFound error instance.
-    pub fn new<S: Into<String>>(name: S, arg: S, env: S, used: S) -> Self {
+    pub fn new(
+        name: String,
+        arg: String,
+        env: String,
+        used: String,
+        method: ExecutableNameMethod,
+    ) -> Self {
         Self {
-            name: name.into(),
-            arg: arg.into(),
-            env: env.into(),
-            used: used.into(),
+            name: name,
+            arg: arg,
+            env: env,
+            used: used,
+            method: method,
         }
     }
 }
 
 impl fmt::Display for ExecutableNotFound {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.used == self.arg {
-            write!(f, "Couldn't find {} on your system under the name {} as specified by you with the --{} argument.", self.name, self.used, self.arg)
-        } else if self.used == self.env {
-            write!(f, "Couldn't find {} on your system under the name {} as specified by you with the {} environment variable.", self.name, self.used, self.env)
-        } else {
-            write!(f, "Couldn't find {} on your system, please make sure {} is installed on your system. You can use the --{} argument or the environment variable {} to set an alternative binary name.", self.name, self.name, self.arg, self.env)
+        match self.method {
+            ExecutableNameMethod::Def => write!(
+                f,
+                "Couldn't find {} on your system under the name {} as specified by you with the --{} argument.",
+                self.name,
+                self.used,
+                self.arg
+            ),
+            ExecutableNameMethod::Env => write!(
+                f,
+                "Couldn't find {} on your system under the name {} as specified by you with the {} environment variable.",
+                self.name,
+                self.used,
+                self.env
+            ),
+            ExecutableNameMethod::Arg => write!(
+                f,
+                "Couldn't find {} on your system, please make sure {} is installed on your system. You can use the --{} argument or the environment variable {} to set an alternative binary name.",
+                self.name,
+                self.name,
+                self.arg,
+                self.env
+            ),
         }
     }
 }
