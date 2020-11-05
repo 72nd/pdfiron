@@ -1,11 +1,14 @@
 mod error;
+mod run;
+
+use std::error::Error;
 
 #[macro_use]
 extern crate log;
 
 #[macro_use]
 extern crate clap;
-use clap::App;
+use clap::{App, ArgMatches};
 
 fn main() {
     let yaml = load_yaml!("cli.yml");
@@ -20,5 +23,16 @@ fn main() {
             },
         )
         .init();
-    let _err = error::GenericError::new("hoi");
+    convert(matches);
+}
+
+/// Does the conversion.
+fn convert(matches: ArgMatches) {
+    let _run = match run::Run::new(matches.value_of("INPUT").unwrap(), matches.value_of("output")) {
+        Ok(x) => x,
+        Err(e) => {
+            error!("{}", e);
+            return
+        },
+    };
 }
