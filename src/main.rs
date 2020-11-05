@@ -1,5 +1,6 @@
 mod error;
 mod run;
+mod util;
 
 #[macro_use]
 extern crate log;
@@ -14,7 +15,7 @@ fn main() {
     env_logger::Builder::new()
         .filter(
             None,
-            match matches.is_present("debug") {
+            match matches.is_present("verbose") {
                 true => log::LevelFilter::Debug,
                 false => log::LevelFilter::Info,
             },
@@ -30,6 +31,7 @@ fn main() {
 fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
     let _run = run::Run::new(matches.value_of("INPUT").unwrap())?
         .output(matches.value_of("output"))
+        .convert_options(matches.value_of("convert_options"))
         .do_tesseract(matches.is_present("do_tesseract"))
         .do_unpaper(matches.is_present("do_unpaper"))
         .init();

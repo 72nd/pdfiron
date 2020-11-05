@@ -19,7 +19,9 @@ pub struct Run {
     /// Absolute path to the output file.
     output: Option<PathBuf>,
     /// Temporary folder where the conversion happens.
-    folder: TempDir,
+    folder: Option<TempDir>,
+    /// Optional parameters for the convert call.
+    convert_options: Option<Vec<String>>,
     /// Whether to run tesseract-ocr or not.
     do_tesseract: bool,
     /// Whether to run unpaper or not.
@@ -38,32 +40,11 @@ impl Run {
         let input = Run::expand_input_path(input.into())?;
         Run::validate_input_file(&input)?;
 
-        let folder = match Builder::new().prefix("pdfiron").tempdir() {
-            Ok(x) => x,
-            Err(e) => {
-                return Err(ErrorMessage::new(format!(
-                    "Couldn't create temp folder, {}",
-                    e
-                )))
-            }
-        };
-
-        let in_dst = folder.path().join(START_PDF);
-        match fs::copy(&input, &in_dst) {
-            Ok(_) => {}
-            Err(e) => {
-                return Err(ErrorMessage::new(format!(
-                    "Couldn't copy input file to {}, {}",
-                    in_dst.display(),
-                    e
-                )))
-            }
-        }
-
         Ok(Self {
             input: input.clone(),
             output: None,
-            folder: folder,
+            folder: None,
+            convert_options: None,
             do_tesseract: false,
             do_unpaper: false,
         })
@@ -75,6 +56,15 @@ impl Run {
         match output {
             Some(x) => self.output = Some(Path::new(&x.into()).to_path_buf()),
             None => {}
+        };
+        self
+    }
+
+    /// Sets the optional parameters for the convert call.
+    pub fn convert_options<S: Into<String>>(&mut self, opt: Option<S>) -> &mut Self {
+        self.convert_options = match opt {
+            Some(x) => Some(x.into().split(" ").map(|x| x.to_string()).collect()),
+            None => None,
         };
         self
     }
@@ -91,15 +81,35 @@ impl Run {
         self
     }
 
-    /// Initializes the instance and creates the temporary folder. If no output path was specified,
-    /// it will be determined depending on the input path: The output will be placed in the same
-    /// folder and with `-ironed` as suffix. The function also creates a temporary folder for the
-    /// file operations and copies the input PDF file into this location as `input.pdf`.
-    pub fn init(&mut self) {
-        match self.output {
-            Some(_) => {}
-            None => self.output = Some(self.default_output_paht()),
-        }
+    /// Initializes the instance and creates the temporary folder. The input PDF is copied into the
+    /// folder and the pages are extracted to images from the document.
+    pub fn init(&mut self) -> Result<(), ErrorMessage> {
+        let folder = match Builder::new().prefix("pdfiron-").tempdir() {
+            Ok(x) => x,
+            Err(e) => {
+                return Err(ErrorMessage::new(format!(
+                    "Couldn't create temp folder, {}",
+                    e
+                )))
+            }
+        };
+        debug!("created new temporary folder {}", folder.path().display());
+
+        let in_dst = folder.path().join(START_PDF);
+        debug!("copy {} to {}", self.input.display(), in_dst.display());
+        match fs::copy(&self.input, &in_dst) {
+            Ok(_) => {}
+            Err(e) => {
+                return Err(ErrorMessage::new(format!(
+                    "Couldn't copy input file to {}, {}",
+                    in_dst.display(),
+                    e
+                )))
+            }
+        };
+
+        self.folder = Some(folder);
+        Ok(())
     }
 
     /// Returns the output path based on the absolute input path. Folder stays the same,
@@ -167,3 +177,8 @@ impl Run {
         }
     }
 }
+
+// If no output path was specified,
+// it will be determined depending on the input path: The output will be placed in the same
+// folder and with `-ironed` as suffix. The function also creates a temporary folder for the
+// file operations and copies the input PDF file into this location as `input.pdf`.
