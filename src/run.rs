@@ -2,9 +2,8 @@ use crate::error::ErrorMessage;
 
 use std::env;
 use std::fs;
-use std::io::{stdin, ErrorKind};
+use std::io::stdin;
 use std::path::PathBuf;
-use std::process::Command;
 
 use shellexpand;
 use tempfile::{Builder, TempDir};
@@ -12,35 +11,37 @@ use tempfile::{Builder, TempDir};
 /// Name of the start file in the temporary folder.
 pub const START_PDF: &str = "input.pdf";
 
-/// Enumeration of the three possible image formats used within the process. All are part of the
-/// Portable Anymap family.
+/// Enumeration of the three possible image formats used within the process.
 #[derive(Debug, Clone, Copy)]
-pub enum PortableAnymap {
+pub enum Format {
     /// RGB images, PBM.
     Bitmap,
     /// Gray images, PGM.
     Graymap,
     /// White/Black only images, PPM.
     Pixmap,
+    /// TIFF used for Tesseract.
+    Tiff,
 }
 
-impl PortableAnymap {
+impl Format {
     /// Returns the appropriate image format based on the user input.
     fn from(use_gray: bool, use_rgb: bool) -> Self {
         println!("gray {} rgb {}", use_gray, use_rgb);
         match (use_gray, use_rgb) {
-            (true, false) => PortableAnymap::Graymap,
-            (false, true) => PortableAnymap::Pixmap,
-            (_, _) => PortableAnymap::Bitmap,
+            (true, false) => Format::Graymap,
+            (false, true) => Format::Pixmap,
+            (_, _) => Format::Bitmap,
         }
     }
 
     /// Returns the file extension for a given Anymap format.
     pub fn extension<'a>(self) -> &'a str {
         match self {
-            PortableAnymap::Bitmap => "pbm",
-            PortableAnymap::Graymap => "pgm",
-            PortableAnymap::Pixmap => "ppm",
+            Format::Bitmap => "pbm",
+            Format::Graymap => "pgm",
+            Format::Pixmap => "ppm",
+            Format::Tiff => "tiff",
         }
     }
 }
@@ -58,7 +59,7 @@ pub struct Run {
     /// Contains a boolean whether the wait should be executed or not.
     do_step: bool,
     /// Image file format used internally.
-    pub format: PortableAnymap,
+    pub format: Format,
 }
 
 impl Run {
@@ -92,7 +93,7 @@ impl Run {
                 }
             },
             do_step: do_step,
-            format: PortableAnymap::from(use_gray, use_rgb),
+            format: Format::from(use_gray, use_rgb),
         };
 
         rsl.log_folder_path(rsl.folder.path().to_path_buf());
@@ -135,11 +136,18 @@ impl Run {
             .collect())
     }
 
-    /// Joins (in this order) the temporary folder path with the given filename and the appropriate
-    /// extension.
-    pub fn build_path<'a, S: Into<String>>(&self, filename: S) -> PathBuf {
+    /// Joins (in this order) the temporary folder path with the given filename and the given
+    /// extension. If None the extension will be determined.
+    pub fn build_path<'a, S: Into<String>>(
+        &self,
+        filename: S,
+        extension: Option<&'a str>,
+    ) -> PathBuf {
         let mut pth = self.prepend_with_temp_folder(filename);
-        pth.set_extension(self.format.extension());
+        pth.set_extension(match extension {
+            Some(x) => x,
+            None => self.format.extension(),
+        });
         pth
     }
 

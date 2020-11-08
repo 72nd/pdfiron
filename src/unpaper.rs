@@ -28,7 +28,7 @@ pub fn execute(
     for input in input_files {
         files.push((
             input.clone(),
-            run.build_path(format!("b_{}_%03d", util::file_name(input))),
+            run.build_path(format!("b_{}_%03d", util::file_name(input)), None),
         ));
     }
 
@@ -38,8 +38,7 @@ pub fn execute(
     let options = Arc::new(options);
     let mut handles = vec![];
 
-    let num = num_cpus::get();
-    for _ in 1..num {
+    for _ in 1..num_cpus::get() {
         let files_arc = Arc::clone(&files_arc);
         let layout = Arc::clone(&layout);
         let output_pages = Arc::clone(&output_pages);
@@ -57,7 +56,7 @@ pub fn execute(
     Ok(())
 }
 
-/// One unpaper execution thread. Takes one image from the shared vector and process it. When
+/// An unpaper execution thread. Takes one image from the shared vector and process it. When
 /// unpaper finishes the next image will be pulled from the vector of tuples. The first element in
 /// the tuple is the input path, the second points to the output file using the unpaper number
 /// format. When the bus is empty, the thread terminates.

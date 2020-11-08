@@ -40,14 +40,20 @@ fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
 
     convert::execute(
         &run,
-        matches.value_of("resolution"),
-        matches.value_of("convert_options"),
+        matches.value_of("resolution").map(|x| x.into()),
+        matches.value_of("convert_options").map(|x| x.into()),
     )?;
     unpaper::execute(
         &run,
         matches.value_of("layout").map(|x| x.into()),
         matches.value_of("output-pages").map(|x| x.into()),
         matches.value_of("unpaper-options").map(|x| x.into()),
+    )?;
+    convert::prepare_for_tesseract(
+        &run,
+        matches.value_of("resolution").map(|x| x.into()),
+        matches.is_present("disable_unpaper"),
+        matches.is_present("disable_tesseract"),
     )?;
     Ok(())
 }
