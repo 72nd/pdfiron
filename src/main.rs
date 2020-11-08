@@ -33,16 +33,21 @@ fn main() {
 fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
     let run = run::Run::new(
         matches.value_of("INPUT").unwrap(),
+        matches.is_present("gray"),
+        matches.is_present("rgb"),
         matches.is_present("step"),
     )?;
 
     convert::execute(
         &run,
-        matches.is_present("gray"),
-        matches.is_present("rgb"),
         matches.value_of("resolution"),
         matches.value_of("convert_options"),
     )?;
-
+    unpaper::execute(
+        &run,
+        matches.value_of("layout").map(|x| x.into()),
+        matches.value_of("output-pages").map(|x| x.into()),
+        matches.value_of("unpaper-options").map(|x| x.into()),
+    )?;
     Ok(())
 }

@@ -19,8 +19,12 @@ pub fn run_cmd<'a>(mut cmd: Command, cmd_name: &'a str) -> Result<(), ErrorMessa
             ),
             false => {
                 return Err(ErrorMessage::new(format!(
-                    "Execution of {} failed {}",
+                    "Execution of {} failed {} {}",
                     cmd_name,
+                    match String::from_utf8(x.stdout) {
+                        Ok(x) => x,
+                        Err(_) => String::from("<Error converting stdout to string>"),
+                    },
                     match String::from_utf8(x.stderr) {
                         Ok(x) => x,
                         Err(_) => String::from("<Error converting stderr to string>"),

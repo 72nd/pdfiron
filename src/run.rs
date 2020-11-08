@@ -1,7 +1,7 @@
 use crate::error::ErrorMessage;
 
 use std::env;
-use std::fs::{self};
+use std::fs;
 use std::io::{stdin, ErrorKind};
 use std::path::PathBuf;
 use std::process::Command;
@@ -11,8 +11,38 @@ use tempfile::{Builder, TempDir};
 
 /// Name of the start file in the temporary folder.
 pub const START_PDF: &str = "input.pdf";
-/// Output file definition for PDF to images conversion.
-pub const CONVERT_OUTPUT: &str = "a_%03d";
+
+/// Enumeration of the three possible image formats used within the process. All are part of the
+/// Portable Anymap family.
+#[derive(Debug, Clone, Copy)]
+pub enum PortableAnymap {
+    /// RGB images, PBM.
+    Bitmap,
+    /// Gray images, PGM.
+    Graymap,
+    /// White/Black only images, PPM.
+    Pixmap,
+}
+
+impl PortableAnymap {
+    /// Returns the appropriate image format based on the user input.
+    fn from(use_gray: bool, use_rgb: bool) -> Self {
+        match (use_gray, use_rgb) {
+            (true, false) => PortableAnymap::Graymap,
+            (false, true) => PortableAnymap::Pixmap,
+            (_, _) => PortableAnymap::Bitmap,
+        }
+    }
+
+    /// Returns the file extension for a given Anymap format.
+    pub fn extension<'a>(self) -> &'a str {
+        match self {
+            PortableAnymap::Bitmap => "pbm",
+            PortableAnymap::Graymap => "pgm",
+            PortableAnymap::Pixmap => "ppm",
+        }
+    }
+}
 
 /// This struct contains all the needed information and states to go trough the different
 /// conversion steps. The object manages the temporary folder.
@@ -26,6 +56,8 @@ pub struct Run {
     /// Provides a comfortable way to pause between the steps if the user did enable the function.
     /// Contains a boolean whether the wait should be executed or not.
     do_step: bool,
+    /// Image file format used internally.
+    pub format: PortableAnymap,
 }
 
 impl Run {
@@ -37,7 +69,12 @@ impl Run {
     ///
     /// To modify the object further use the build pattern and finish the configuration with
     /// init().
-    pub fn new<S: Into<String>>(input: S, do_step: bool) -> Result<Self, ErrorMessage> {
+    pub fn new<S: Into<String>>(
+        input: S,
+        use_gray: bool,
+        use_rgb: bool,
+        do_step: bool,
+    ) -> Result<Self, ErrorMessage> {
         let input = Run::expand_input_path(input.into())?;
         Run::validate_input_file(&input)?;
 
@@ -54,6 +91,7 @@ impl Run {
                 }
             },
             do_step: do_step,
+            format: PortableAnymap::from(use_gray, use_rgb),
         };
 
         rsl.log_folder_path(rsl.folder.path().to_path_buf());
@@ -71,8 +109,37 @@ impl Run {
     }
 
     /// Returns the path to the temporary folder with some path appended.
-    pub fn prepend_with_temp_folder<'a, S: Into<&'a str>>(&self, path: S) -> PathBuf {
+    pub fn prepend_with_temp_folder<'a, S: Into<String>>(&self, path: S) -> PathBuf {
         self.folder.path().join(path.into())
+    }
+
+    /// Returns a Vector with all paths of the images in the temporary folder with a given prefix.
+    pub fn image_files<'a>(&self, starts_with: &'a str) -> Result<Vec<PathBuf>, ErrorMessage> {
+        let elements = match fs::read_dir(&self.folder) {
+            Ok(x) => x,
+            Err(e) => {
+                return Err(ErrorMessage::new(format!(
+                    "Couldn't read content of temp folder, {}",
+                    e
+                )))
+            }
+        };
+
+        Ok(elements
+            .map(|x| x.unwrap().path())
+            .filter(|x| match x.file_name() {
+                Some(z) => z.to_string_lossy().starts_with(starts_with),
+                None => false,
+            })
+            .collect())
+    }
+
+    /// Joins (in this order) the temporary folder path with the given filename and the appropriate
+    /// extension.
+    pub fn build_path<'a, S: Into<String>>(&self, filename: S) -> PathBuf {
+        let mut pth = self.prepend_with_temp_folder(filename);
+        pth.set_extension(self.format.extension());
+        pth
     }
 
     /// Outputs the path of the temporary folder to the user via the debug facility. This enables

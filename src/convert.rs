@@ -1,5 +1,5 @@
 use crate::error::ErrorMessage;
-use crate::run::{Run, CONVERT_OUTPUT, START_PDF};
+use crate::run::{PortableAnymap, Run, START_PDF};
 use crate::util;
 
 use std::process::Command;
@@ -11,8 +11,6 @@ const CONVERT_BINARY: &str = "convert";
 /// optional name of the convert binary (specify by the command line argument).
 pub fn execute<'a>(
     run: &Run,
-    use_gray: bool,
-    use_rgb: bool,
     resolution: Option<&'a str>,
     options: Option<&'a str>,
 ) -> Result<(), ErrorMessage> {
@@ -22,27 +20,24 @@ pub fn execute<'a>(
     cmd.arg("-units").arg("PixelsPerInch");
 
     // Color mode
-    match (use_gray, use_rgb) {
-        (true, false) => cmd
+    match run.format {
+        PortableAnymap::Graymap => cmd
             .arg("-colorspace")
             .arg("gray")
             .arg("-depth")
             .arg("8")
             .arg("-background")
             .arg("white")
-            .arg("-flatten")
             .arg("-alpha")
             .arg("Off"),
-        (false, true) => cmd
+        PortableAnymap::Bitmap => cmd
             .arg("-depth")
             .arg("8")
             .arg("-background")
             .arg("white")
-            .arg("flatten")
-            .arg("alpha")
-            .arg("Off")
-            .arg("-density"),
-        (_, _) => cmd.arg("-type").arg("Bilevel"),
+            .arg("-alpha")
+            .arg("Off"),
+        PortableAnymap::Pixmap => cmd.arg("-type").arg("Bilevel"),
     };
 
     // Density
@@ -67,17 +62,9 @@ pub fn execute<'a>(
 
     // Input and output
     cmd.arg(run.prepend_with_temp_folder(START_PDF))
-        .arg(run.prepend_with_temp_folder(
-            &format!(
-                "{}.{}",
-                CONVERT_OUTPUT,
-                match (use_gray, use_rgb) {
-                    (true, false) => "pgm",
-                    (false, true) => "ppm",
-                    (_, _) => "pbm",
-                }
-            )[..],
-        ));
+        .arg(run.build_path("a_%03d"));
+
+    println!("{:?}", &cmd);
 
     util::run_cmd(cmd, CONVERT_BINARY)?;
     run.wait();
