@@ -27,6 +27,7 @@ pub enum PortableAnymap {
 impl PortableAnymap {
     /// Returns the appropriate image format based on the user input.
     fn from(use_gray: bool, use_rgb: bool) -> Self {
+        println!("gray {} rgb {}", use_gray, use_rgb);
         match (use_gray, use_rgb) {
             (true, false) => PortableAnymap::Graymap,
             (false, true) => PortableAnymap::Pixmap,

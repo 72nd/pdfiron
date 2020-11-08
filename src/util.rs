@@ -49,3 +49,9 @@ pub fn run_cmd<'a>(mut cmd: Command, cmd_name: &'a str) -> Result<(), ErrorMessa
     Ok(())
 }
 
+/// Returns the filename (without any extension) of a path.
+pub fn file_name(path: PathBuf) -> String {
+    let name = path.file_name().unwrap().to_string_lossy();
+    let name_ele = name.split(".").collect::<Vec<&str>>();
+    name_ele.split_first().unwrap().0.to_string()
+}

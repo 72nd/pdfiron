@@ -5,7 +5,8 @@ about: enhance scanned PDF's
 args:
     - convert-options:
         help: additional options for convert
-        long: convert-options, co
+        long: convert-options
+        aliases: [co]
         takes_value: true
     - debug:
         help: do not delete the temporary folder on exit
@@ -13,10 +14,12 @@ args:
         short: d
     - disable-unpaper:
         help: skip document optimization
-        long: disable-unpaper, du
+        long: disable-unpaper
+        aliases: [du]
     - disable-tesseract:
         help: skip OCR
-        long: disable-tesseract, dt
+        long: disable-tesseract
+        aliases: [dt]
     - gray:
         help: use grayscale
         long: gray
@@ -47,7 +50,8 @@ args:
         takes_value: true
     - output-pages:
         help: number of output pages per input page, used for splitting double layout documents
-        long: output-pages, op
+        long: output-pages
+        aliases: [op]
         possible_values: ["1", "2"]
         default_value: "1"
         takes_value: true
@@ -71,11 +75,13 @@ args:
         short: s
     - tesseract-options:
         help: optional options for tesseract
-        long: tesseract-options, to
+        long: tesseract-options
+        aliases: [to]
         takes_value: true
     - unpaper-options:
         help: optional options for unpaper
-        long: unpaper-options, uo
+        long: unpaper-options
+        aliases: [uo]
         takes_value: true
     - verbose:
         help: print debug output and stdout of called commands

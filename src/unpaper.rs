@@ -25,10 +25,11 @@ pub fn execute(
 
     let input_files = run.image_files("a_")?;
     let mut files: Vec<(PathBuf, PathBuf)> = vec![];
-    let mut i = 1;
     for input in input_files {
-        files.push((input, run.build_path(format!("b_{}_%03d", i))));
-        i += 1;
+        files.push((
+            input.clone(),
+            run.build_path(format!("b_{}_%03d", util::file_name(input))),
+        ));
     }
 
     let files_arc = Arc::new(Mutex::new(files));
