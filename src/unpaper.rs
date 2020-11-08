@@ -23,9 +23,8 @@ pub fn execute(
 ) -> Result<(), ErrorMessage> {
     run.log_step("Enhance with unpaper");
 
-    let input_files = run.image_files("a_")?;
     let mut files: Vec<(PathBuf, PathBuf)> = vec![];
-    for input in input_files {
+    for input in run.image_files("a_")? {
         files.push((
             input.clone(),
             run.build_path(format!("b_{}_%03d", util::file_name(input)), None),

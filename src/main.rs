@@ -1,6 +1,7 @@
 mod convert;
 mod error;
 mod run;
+mod tesseract;
 mod unpaper;
 mod util;
 
@@ -55,5 +56,11 @@ fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
         matches.is_present("disable_unpaper"),
         matches.is_present("disable_tesseract"),
     )?;
+    tesseract::execute(
+        &run,
+        matches.value_of("lang").map(|x| x.into()),
+        matches.value_of("unpaper-options").map(|x| x.into()),
+    )?;
+
     Ok(())
 }
