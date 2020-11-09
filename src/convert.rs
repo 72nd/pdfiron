@@ -27,7 +27,7 @@ pub fn execute<'a>(
         .map(|x| {
             (
                 run.prepend_with_temp_folder(format!("{}[{}]", START_PDF, x)),
-                run.build_path(format!("a_{}", x), None),
+                run.build_path(format!("a_{:05}", x), None),
             )
         })
         .collect();
@@ -80,7 +80,7 @@ pub fn prepare_for_tesseract<'a>(
     for input in input_files {
         files.push((
             input.clone(),
-            run.build_path(format!("c_{}_%03d", util::file_name(input)), Some("tiff")),
+            run.build_path(format!("c_{}_%05d", util::file_name(input)), Some("tiff")),
         ));
     }
 

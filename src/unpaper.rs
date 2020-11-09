@@ -27,7 +27,7 @@ pub fn execute(
     for input in run.query_files("a_")? {
         files.push((
             input.clone(),
-            run.build_path(format!("b_{}_%03d", util::file_name(input)), None),
+            run.build_path(format!("b_{}_%05d", util::file_name(input)), None),
         ));
     }
 
