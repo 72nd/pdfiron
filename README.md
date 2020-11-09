@@ -15,14 +15,6 @@ For an example, take this scan from Friedrich Nietzsches [Also sprach Zarathustr
 
 ![Example Scan Zarathustra](misc/example-1.png)
 
-## Technical details
-
-
-- Pdfiron supports the splitting of double layout pages (two pages per sheet) into two individual output pages.
-- The execution of tesseract is optional.
-
-Pdfiron makes full usage of multi core systems and distributes the work of each step on as many cores as available on the system.
-
 
 ## Installation
 
@@ -36,11 +28,76 @@ Pdfiron depends on a number of applications to perform it's task:
 Under Debian based system you can install the dependencies with the following packages:
 
 ```shell script
-apt install imagemagick unpaper poppler tesseract-ocr
+apt install imagemagick unpaper poppler tesseract-ocr tesseract-ocr-eng
 
-# Do not forget to install the language packages for tesseract:
-apt install tesseract-ocr-eng tesseract-ocr-deu
+# Do not forget to install additional language packages for tesseract if needed:
+apt install tesseract-ocr-deu
 ``` 
+
+
+## Usage
+
+Please also use the built in help via `pdfiron --help`. The most basic call of pdfiron is as follows:
+
+```shell script
+pdfiron scan.pdf
+```
+
+This will take `scan.pdf` as an input and performs the optimization and OCR on the file. If not stated otherwise (via the `--output`, `-o` argument) the result will be saved as `scaned-ironed.pdf`. Please note that the process can take some time (even minutes). This heavily depends on the input document and your system. It's possible to tweak the performance by alter the resolution and/or number of Tesseract threads (see below).
+
+If our document isn't in English, use the `--lang`, `-l` parameter to specify another language. To work properly the Tesseract language package has to be installed on your system.
+
+```shell script
+pdfiron scan.pdf --lang deu
+```
+
+
+### Splitting pages
+
+It's fairly common to get scans which contain two book pages on one page. This can be quit annoying if you want to print the text as a brochure (side node: `pdfbook` from the [pdfjam package](https://github.com/DavidFirth/pdfjam) is quit good at this). To do this use the following command:
+
+```shell script
+pdfiron scan.pdf --layout double --output-pages 2
+```
+
+The `--layout double` informs Unpaper to expect two book pages per PDF page, further `--output-pages 1` instructs Unpaper to split this to pages into individual ones. If `--layout` isn't set Unpaper tries to figure out the layout by itself. If this automatic recognition fails in some cases the `--layout` option (`single` or `double`) can be used on it's own to help Unpaper.
+
+
+### Skip steps
+
+Sometimes you may want to skip some steps of the process. For example if you plan to immediately print out the result the time-consuming OCR isn't needed. In other cases the input file is already in a fairly readable state and only the OCR is missing. That's why pdfiron offers you to skip these with `--skip-unpaper` (skip the enhancement of the document) and `--skip-tesseract` (skip the OCR).
+
+
+### Debug output
+
+Using the `--debug` flag pdfiron will provide the user with in depth status information. This can also be helpful if you want to optimize big files and want some more information about the current process state.
+
+
+### Resolution
+
+By default pdfiron runs with a resolution of 300 DPI. If you want to change this because of file size or process time use the `--resolution` flag.
+
+
+### Rotate document
+
+If your input file isn't correctly orientated you can use the `--rotate` argument to fix the orientation. The rotation is expressed in degrees clock-wise.
+
+
+### Further (aka «expert») options
+
+This section contains some more «in-depth» technical options.
+
+**Step trough the process.** In some cases you may want to manually step trough the different stages of the process. By using the `--step` flag pdfinfo will pause after each step. This way you can manually alter the files in the temporary working folder (the path will be printed at the start of the program).
+
+**Tweak the number of Tesseract threads.** Pdfiron tries to use as much parallelization as possible to speed up the run. But in the case of Tesseract minimize the needed time doesn't implies simply unning as much instances of Tesseract as there are cores in the system. Due the implementation one Tesseract process uses up to four cores on the system (learn more [here](https://github.com/tesseract-ocr/tesseract/issues/1600). If multiple processes are forced to use the same core they will slow down each other. Thus pdfiron executes `(NUMBER_CORES/4).ceil()` Tesseract at the same time. If for some reason another number of threads is favorable the `--tesseract-threads` argument can be used. All other external processes (`unpaper` and `convert`) are executed in as many threads as cores are available on the system.
+
+
+## Technical details
+
+- Pdfiron supports the splitting of double layout pages (two pages per sheet) into two individual output pages.
+- The execution of tesseract is optional.
+
+Pdfiron makes full usage of multi core systems and distributes the work of each step on as many cores as available on the system.
 
 ## Todo's
 
