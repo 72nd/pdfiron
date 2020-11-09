@@ -60,7 +60,7 @@ It's fairly common to get scans which contain two book pages on one page. This c
 pdfiron scan.pdf --layout double --output-pages 2
 ```
 
-The `--layout double` informs Unpaper to expect two book pages per PDF page, further `--output-pages 1` instructs Unpaper to split this to pages into individual ones. If `--layout` isn't set Unpaper tries to figure out the layout by itself. If this automatic recognition fails in some cases the `--layout` option (`single` or `double`) can be used on it's own to help Unpaper.
+The `--layout double` informs Unpaper to expect two book pages per PDF page, further `--output-pages 1` instructs Unpaper to split this to pages into individual ones. If `--layout` isn't set Unpaper tries to figure out the layout by itself. If this automatic recognition fails in some cases the `--layout` option (`single` or `double`) can be used on it's own to help Unpaper. The difference between explicit stating `--layout single` vs. using the auto-detection can be observed in the image below. In the output with the auto-detection the wrong rotation wasn't corrected.
 
 ![Explicit setting --layout single](misc/layout.png)
 

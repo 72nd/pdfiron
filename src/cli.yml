@@ -44,6 +44,12 @@ args:
         possible_values: [single, double, none]
         default_value: none
         takes_value: true
+    - no-blackfilter:
+        help: Disables the blackfilter of unpaper
+        long: no-blackfilter
+    - no-grayfilter:
+        help: Disables the grayfilter of unpaper
+        long: no-grayfilter
     - output:
         help: optional path to output file
         long: output

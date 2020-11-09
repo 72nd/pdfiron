@@ -52,6 +52,8 @@ fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
         matches.value_of("layout").map(|x| x.into()),
         matches.value_of("output-pages").map(|x| x.into()),
         matches.value_of("unpaper-options").map(|x| x.into()),
+        matches.is_present("no-blackfilter"),
+        matches.is_present("no-grayfilter"),
     )?;
     convert::prepare_for_tesseract(
         &run,

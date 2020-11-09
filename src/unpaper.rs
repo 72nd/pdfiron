@@ -20,6 +20,8 @@ pub fn execute(
     layout: Option<String>,
     output_pages: Option<String>,
     options: Option<String>,
+    no_blackfilter: bool,
+    no_grayfilter: bool,
 ) -> Result<(), ErrorMessage> {
     run.log_step("Enhance with unpaper");
 
@@ -42,8 +44,9 @@ pub fn execute(
         let layout = Arc::clone(&layout);
         let output_pages = Arc::clone(&output_pages);
         let options = Arc::clone(&options);
-        let handle =
-            thread::spawn(move || unpaper_thread(files_arc, layout, output_pages, options));
+        let handle = thread::spawn(move || {
+            unpaper_thread(files_arc, layout, output_pages, options, no_blackfilter, no_grayfilter)
+        });
         handles.push(handle);
     }
 
@@ -64,7 +67,9 @@ fn unpaper_thread(
     layout: Arc<Option<String>>,
     output_pages: Arc<Option<String>>,
     options: Arc<Option<String>>,
-) -> Result<(), ErrorMessage>{
+    no_blackfilter: bool,
+    no_grayfilter: bool,
+) -> Result<(), ErrorMessage> {
     loop {
         let mut files = input.lock().unwrap();
         let file = match files.pop() {
@@ -89,6 +94,14 @@ fn unpaper_thread(
                 cmd.arg("--output-pages").arg(x);
             }
             None => {}
+        };
+        match no_blackfilter {
+            true => cmd.arg("--no-blackfilter"),
+            false => &cmd,
+        };
+        match no_grayfilter {
+            true => cmd.arg("--no-grayfilter"),
+            false => &cmd,
         };
         cmd.arg(&file.0);
         cmd.arg(&file.1);
