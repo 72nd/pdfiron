@@ -1,7 +1,7 @@
 # pdfiron
 
 <p align="center">
-  <img src="misc/logo.png">
+  <img width="400" src="misc/logo.png">
 </p>
 
 
