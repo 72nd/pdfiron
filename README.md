@@ -13,7 +13,7 @@ Studying human sciences at university demands reading lots of text. Frustratingl
 
 For an example, take this scan from Friedrich Nietzsches [Also sprach Zarathustra](https://en.wikipedia.org/wiki/Also_sprach_Zarathustra):
 
-![Example Scan Zarathustra](misc/example1.png)
+![Example Scan Zarathustra](misc/example-1.png)
 
 ## Technical details
 
