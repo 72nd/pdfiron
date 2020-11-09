@@ -7,6 +7,8 @@ use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;
 
+use num_cpus;
+
 /// Name of the Tesseract binary.
 const TESSERACT_BINARY: &str = "tesseract";
 
@@ -35,11 +37,22 @@ pub fn execute(
     let options = Arc::new(options);
     let mut handles = vec![];
 
-    let threads = match threads {
-        Some(x) => x.parse::<u64>().unwrap(),
-        None => 2,
+    // Tesseract uses internally four cores per process. Thus starting more processes as (N_CORES/4).ceil()
+    // doesn't make any sense as one Tesseract process running on four cores is way faster than
+    // two processes running on two cores each.
+    let n_threads = match threads {
+        Some(x) => match x.parse::<usize>() {
+            Ok(x) => x,
+            Err(e) => {
+                return Err(ErrorMessage::new(format!(
+                    "Couldn't convert given thread number for Tesseract to number, {}",
+                    e
+                )))
+            }
+        },
+        None => (num_cpus::get() as f64 / 4.0).ceil() as usize,
     };
-    for _ in 0..threads {
+    for _ in 0..n_threads {
         let files = Arc::clone(&files);
         let lang = Arc::clone(&lang);
         let options = Arc::clone(&options);

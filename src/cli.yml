@@ -84,10 +84,8 @@ args:
         aliases: [to]
         takes_value: true
     - tesseract-threads:
-        help: specify the number of threads used by Tesseract
+        help: overwrite the internal calculation of the optimal number of threads for Tesseract
         long: tesseract-threads
-        aliases: [tt]
-        default_value: "4"
         takes_value: true
     - unpaper-options:
         help: optional options for unpaper
