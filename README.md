@@ -25,7 +25,6 @@ Pdfiron makes full usage of multi core systems and distributes the work of each 
 
 ## Todo's
 
-- [ ] Rotate input PDF's before processing.
 - [ ] Ignore some pages bug
 - [ ] Readme
 	- [ ] Example

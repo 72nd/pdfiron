@@ -1,6 +1,6 @@
 [package]
 name = "pdfiron"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["72nd <msg@frg72.com>"]
 edition = "2018"
 

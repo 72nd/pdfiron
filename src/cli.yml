@@ -56,20 +56,23 @@ args:
         possible_values: ["1", "2"]
         default_value: "1"
         takes_value: true
-    - overwrite:
-        help: enables the overwriting of an existing output file
-        long: overwrite
-        short: r
     - resolution:
         help: resolution used
         long: resolution
+        short: u
         default_value: "300"
+        value_names: [dpi]
         takes_value: true
     - rgb:
         help: use rgb
         long: rgb
         conflicts_with:
             - gray
+    - rotate:
+        help: Rotates the input PDF clockwise with the given degree
+        long: rotate
+        value_names: [degrees]
+        takes_value: true
     - step:
         help: Wait between steps enabling the user to alter the working files
         long: step

@@ -44,6 +44,7 @@ fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
     convert::execute(
         &run,
         matches.value_of("resolution").map(|x| x.into()),
+        matches.value_of("rotate").map(|x| x.into()),
         matches.value_of("convert-options").map(|x| x.into()),
     )?;
     unpaper::execute(

@@ -17,6 +17,7 @@ const CONVERT_BINARY: &str = "convert";
 pub fn execute<'a>(
     run: &Run,
     resolution: Option<String>,
+    rotate: Option<String>,
     options: Option<String>,
 ) -> Result<(), ErrorMessage> {
     run.log_step("Extracting images form input PDF");
@@ -34,6 +35,7 @@ pub fn execute<'a>(
     let files_arc = Arc::new(Mutex::new(input_files));
     let format = Arc::new(run.format);
     let resolution = Arc::new(resolution);
+    let rotate = Arc::new(rotate);
     let options = Arc::new(options);
     let mut handles = vec![];
 
@@ -41,9 +43,11 @@ pub fn execute<'a>(
         let files_arc = Arc::clone(&files_arc);
         let format = Arc::clone(&format);
         let resolution = Arc::clone(&resolution);
+        let rotate = Arc::clone(&rotate);
         let options = Arc::clone(&options);
 
-        let handle = thread::spawn(move || convert_thread(files_arc, format, resolution, options));
+        let handle =
+            thread::spawn(move || convert_thread(files_arc, format, resolution, rotate, options));
         handles.push(handle);
     }
     for handle in handles {
@@ -83,6 +87,7 @@ pub fn prepare_for_tesseract<'a>(
     let files_arc = Arc::new(Mutex::new(files));
     let format = Arc::new(Format::Tiff);
     let resolution = Arc::new(resolution);
+    let rotate = Arc::new(None);
     let options = Arc::new(None);
     let mut handles = vec![];
 
@@ -90,9 +95,11 @@ pub fn prepare_for_tesseract<'a>(
         let files_arc = Arc::clone(&files_arc);
         let format = Arc::clone(&format);
         let resolution = Arc::clone(&resolution);
+        let rotate = Arc::clone(&rotate);
         let options = Arc::clone(&options);
 
-        let handle = thread::spawn(move || convert_thread(files_arc, format, resolution, options));
+        let handle =
+            thread::spawn(move || convert_thread(files_arc, format, resolution, rotate, options));
         handles.push(handle);
     }
     for handle in handles {
@@ -110,6 +117,7 @@ fn convert_thread<'a>(
     input: Arc<Mutex<Vec<(PathBuf, PathBuf)>>>,
     format: Arc<Format>,
     resolution: Arc<Option<String>>,
+    rotate: Arc<Option<String>>,
     options: Arc<Option<String>>,
 ) -> Result<(), ErrorMessage> {
     loop {
@@ -142,6 +150,11 @@ fn convert_thread<'a>(
                 .arg("Off"),
             Format::Pixmap => cmd.arg("-type").arg("Bilevel"),
             Format::Tiff => &cmd,
+        };
+
+        match *rotate {
+            Some(ref x) => cmd.arg("-rotate").arg(x),
+            None => &cmd,
         };
 
         set_density(&mut cmd, Arc::clone(&resolution))?;
