@@ -62,6 +62,8 @@ pdfiron scan.pdf --layout double --output-pages 2
 
 The `--layout double` informs Unpaper to expect two book pages per PDF page, further `--output-pages 1` instructs Unpaper to split this to pages into individual ones. If `--layout` isn't set Unpaper tries to figure out the layout by itself. If this automatic recognition fails in some cases the `--layout` option (`single` or `double`) can be used on it's own to help Unpaper.
 
+![Explicit setting --layout single](misc/layout.png)
+
 
 ### Skip steps
 
@@ -78,6 +80,11 @@ Using the `--debug` flag pdfiron will provide the user with in depth status info
 By default pdfiron runs with a resolution of 300 DPI. If you want to change this because of file size or process time use the `--resolution` flag.
 
 
+### Color Mode
+
+
+
+
 ### Rotate document
 
 If your input file isn't correctly orientated you can use the `--rotate` argument to fix the orientation. The rotation is expressed in degrees clock-wise.
@@ -89,7 +96,7 @@ This section contains some more «in-depth» technical options.
 
 **Step trough the process.** In some cases you may want to manually step trough the different stages of the process. By using the `--step` flag pdfinfo will pause after each step. This way you can manually alter the files in the temporary working folder (the path will be printed at the start of the program).
 
-**Tweak the number of Tesseract threads.** Pdfiron tries to use as much parallelization as possible to speed up the run. But in the case of Tesseract minimize the needed time doesn't implies simply unning as much instances of Tesseract as there are cores in the system. Due the implementation one Tesseract process uses up to four cores on the system (learn more [here](https://github.com/tesseract-ocr/tesseract/issues/1600). If multiple processes are forced to use the same core they will slow down each other. Thus pdfiron executes `(NUMBER_CORES/4).ceil()` Tesseract at the same time. If for some reason another number of threads is favorable the `--tesseract-threads` argument can be used. All other external processes (`unpaper` and `convert`) are executed in as many threads as cores are available on the system.
+**Tweak the number of Tesseract threads.** Pdfiron tries to use as much parallelization as possible to speed up the run. But in the case of Tesseract minimize the needed time doesn't implies simply unning as much instances of Tesseract as there are cores in the system. Due the implementation one Tesseract process uses up to four cores on the system (learn more [here](https://github.com/tesseract-ocr/tesseract/issues/1600)). If multiple processes are forced to use the same core they will slow down each other. Thus pdfiron executes `(NUMBER_CORES/4).ceil()` Tesseract at the same time. If for some reason another number of threads is favorable the `--tesseract-threads` argument can be used. All other external processes (`unpaper` and `convert`) are executed in as many threads as cores are available on the system.
 
 
 ## Technical details
@@ -101,6 +108,10 @@ Pdfiron makes full usage of multi core systems and distributes the work of each 
 
 ## Todo's
 
+- [ ] Skip grayfilter
+- [ ] Exclude pages
+- [ ] Ev.: Contrast
+- [ ] Abstract parameters/options
 - [ ] Readme
 	- [ ] Example
 	- [ ] Usage 
