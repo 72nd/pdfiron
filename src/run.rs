@@ -118,11 +118,6 @@ impl Run {
         self.folder.path().join(path.into())
     }
 
-    /// Returns the path of the temporary folder.
-    pub fn temp_folder(&self) -> PathBuf {
-        self.folder.path().to_path_buf()
-    }
-
     /// Returns a Vector with all paths of the files in the temporary folder with a given prefix
     /// and a optional file ending.
     pub fn query_files<'a>(&self, starts_with: &'a str) -> Result<Vec<PathBuf>, ErrorMessage> {

@@ -51,6 +51,7 @@ args:
     - output-pages:
         help: number of output pages per input page, used for splitting double layout documents
         long: output-pages
+        short: p
         aliases: [op]
         possible_values: ["1", "2"]
         default_value: "1"

@@ -1,7 +1,6 @@
 /// This module contains the errors which can occur during the execution of pdfiron. As this
 /// application is primary operated by the user itself the main focus is tho offer concise error
 /// messages for humans. Some related errors are unified into their own error class.
-use std::convert::From;
 use std::error::Error;
 use std::fmt;
 
@@ -30,6 +29,7 @@ impl fmt::Debug for ErrorMessage {
 
 impl Error for ErrorMessage {}
 
+/*
 /// Defines the used method of obtaining the name of a binary.
 pub enum ExecutableNameMethod {
     Def,
@@ -112,3 +112,4 @@ impl From<ExecutableNotFound> for ErrorMessage {
         return ErrorMessage(format!("{}", item));
     }
 }
+*/
