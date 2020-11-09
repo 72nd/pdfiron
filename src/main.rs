@@ -19,7 +19,7 @@ fn main() {
     env_logger::Builder::new()
         .filter(
             None,
-            match matches.is_present("verbose") {
+            match matches.is_present("debug") {
                 true => log::LevelFilter::Debug,
                 false => log::LevelFilter::Info,
             },

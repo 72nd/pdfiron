@@ -9,7 +9,7 @@ args:
         aliases: [co]
         takes_value: true
     - debug:
-        help: do not delete the temporary folder on exit
+        help: outputs the debug messages
         long: debug
         short: d
     - disable-unpaper:
@@ -32,9 +32,10 @@ args:
         value_name: INPUT
         index: 1
     - lang:
-        help: set tesseract language, can also be set via the PDFIRON_LANG environment variable
+        help: set tesseract language
         long: lang
         short: a
+        default_value: eng
         takes_value: true
     - layout:
         help: layout of the scanned page
@@ -93,8 +94,4 @@ args:
         long: unpaper-options
         aliases: [uo]
         takes_value: true
-    - verbose:
-        help: print debug output and stdout of called commands
-        long: verbose
-        short: v
 
