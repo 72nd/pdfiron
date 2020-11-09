@@ -1,5 +1,6 @@
 mod convert;
 mod error;
+mod pdf;
 mod run;
 mod tesseract;
 mod unpaper;
@@ -34,6 +35,7 @@ fn main() {
 fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
     let run = run::Run::new(
         matches.value_of("INPUT").unwrap(),
+        matches.value_of("output"),
         matches.is_present("gray"),
         matches.is_present("rgb"),
         matches.is_present("step"),
@@ -42,7 +44,7 @@ fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
     convert::execute(
         &run,
         matches.value_of("resolution").map(|x| x.into()),
-        matches.value_of("convert_options").map(|x| x.into()),
+        matches.value_of("convert-options").map(|x| x.into()),
     )?;
     unpaper::execute(
         &run,
@@ -53,14 +55,17 @@ fn convert(matches: ArgMatches) -> Result<(), error::ErrorMessage> {
     convert::prepare_for_tesseract(
         &run,
         matches.value_of("resolution").map(|x| x.into()),
-        matches.is_present("disable_unpaper"),
-        matches.is_present("disable_tesseract"),
+        matches.is_present("disable-unpaper"),
+        matches.is_present("disable-tesseract"),
     )?;
     tesseract::execute(
         &run,
+        matches.is_present("disable-tesseract"),
         matches.value_of("lang").map(|x| x.into()),
-        matches.value_of("unpaper-options").map(|x| x.into()),
+        matches.value_of("tesseract-options").map(|x| x.into()),
+        matches.value_of("tesseract-threads").map(|x| x.into()),
     )?;
+    pdf::unite(&run)?;
 
     Ok(())
 }

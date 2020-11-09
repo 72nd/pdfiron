@@ -78,6 +78,12 @@ args:
         long: tesseract-options
         aliases: [to]
         takes_value: true
+    - tesseract-threads:
+        help: specify the number of threads used by Tesseract
+        long: tesseract-threads
+        aliases: [tt]
+        default_value: "4"
+        takes_value: true
     - unpaper-options:
         help: optional options for unpaper
         long: unpaper-options

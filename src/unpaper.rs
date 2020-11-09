@@ -24,7 +24,7 @@ pub fn execute(
     run.log_step("Enhance with unpaper");
 
     let mut files: Vec<(PathBuf, PathBuf)> = vec![];
-    for input in run.image_files("a_")? {
+    for input in run.query_files("a_")? {
         files.push((
             input.clone(),
             run.build_path(format!("b_{}_%03d", util::file_name(input)), None),
@@ -48,7 +48,7 @@ pub fn execute(
     }
 
     for handle in handles {
-        handle.join().unwrap();
+        handle.join().unwrap()?;
     }
 
     run.wait();
@@ -64,12 +64,12 @@ fn unpaper_thread(
     layout: Arc<Option<String>>,
     output_pages: Arc<Option<String>>,
     options: Arc<Option<String>>,
-) {
+) -> Result<(), ErrorMessage>{
     loop {
         let mut files = input.lock().unwrap();
         let file = match files.pop() {
             Some(x) => x,
-            None => return,
+            None => return Ok(()),
         };
         drop(files);
 
@@ -94,10 +94,7 @@ fn unpaper_thread(
         cmd.arg(&file.1);
 
         debug!("Going to enhance {} with unpaper", &file.0.display());
-        match util::run_cmd(cmd, UNPAPER_BINARY) {
-            Ok(_) => {}
-            Err(e) => error!("{}", e),
-        };
+        util::run_cmd(cmd, UNPAPER_BINARY)?;
         debug!(
             "{} was enhanced and saved as {}",
             &file.0.display(),

@@ -27,7 +27,6 @@ pub enum Format {
 impl Format {
     /// Returns the appropriate image format based on the user input.
     fn from(use_gray: bool, use_rgb: bool) -> Self {
-        println!("gray {} rgb {}", use_gray, use_rgb);
         match (use_gray, use_rgb) {
             (true, false) => Format::Graymap,
             (false, true) => Format::Pixmap,
@@ -73,16 +72,20 @@ impl Run {
     /// init().
     pub fn new<S: Into<String>>(
         input: S,
+        output: Option<S>,
         use_gray: bool,
         use_rgb: bool,
         do_step: bool,
     ) -> Result<Self, ErrorMessage> {
-        let input = Run::expand_input_path(input.into())?;
+        let input = Run::expand_path(input.into())?;
         Run::validate_input_file(&input)?;
 
         let rsl = Self {
             input: input.clone(),
-            output: None,
+            output: match output {
+                Some(x) => Some(Run::expand_path(x.into())?),
+                None => None,
+            },
             folder: match Builder::new().prefix("pdfiron-").tempdir() {
                 Ok(x) => x,
                 Err(e) => {
@@ -115,8 +118,14 @@ impl Run {
         self.folder.path().join(path.into())
     }
 
-    /// Returns a Vector with all paths of the images in the temporary folder with a given prefix.
-    pub fn image_files<'a>(&self, starts_with: &'a str) -> Result<Vec<PathBuf>, ErrorMessage> {
+    /// Returns the path of the temporary folder.
+    pub fn temp_folder(&self) -> PathBuf {
+        self.folder.path().to_path_buf()
+    }
+
+    /// Returns a Vector with all paths of the files in the temporary folder with a given prefix
+    /// and a optional file ending.
+    pub fn query_files<'a>(&self, starts_with: &'a str) -> Result<Vec<PathBuf>, ErrorMessage> {
         let elements = match fs::read_dir(&self.folder) {
             Ok(x) => x,
             Err(e) => {
@@ -189,24 +198,29 @@ impl Run {
         }
     }
 
-    /// Returns the output path based on the absolute input path. Folder stays the same,
-    /// the suffix -ironed is added to the filename.
-    fn default_output_path(&self) -> PathBuf {
-        let mut rsl = PathBuf::new();
-        rsl.push(self.input.parent().unwrap());
-        let name = self.input.file_name().unwrap().to_string_lossy();
-        let name_ele = name.split(".").collect::<Vec<&str>>();
-        let name_parts = name_ele.split_first().unwrap();
-        rsl.push(format!(
-            "{}-ironed.{}",
-            name_parts.0,
-            name_parts.1.join(".")
-        ));
-        rsl
+    /// Returns the output path for the PDF. If the user didn't specify a path, a default path will
+    /// be used in the same folder as the input file.
+    pub fn output_path(&self) -> PathBuf {
+        match &self.output {
+            Some(x) => x.clone(),
+            None => {
+                let mut rsl = PathBuf::new();
+                rsl.push(self.input.parent().unwrap());
+                let name = self.input.file_name().unwrap().to_string_lossy();
+                let name_ele = name.split(".").collect::<Vec<&str>>();
+                let name_parts = name_ele.split_first().unwrap();
+                rsl.push(format!(
+                    "{}-ironed.{}",
+                    name_parts.0,
+                    name_parts.1.join(".")
+                ));
+                rsl
+            }
+        }
     }
 
-    /// Shell expands the input path and normalize it to an absolute path.
-    fn expand_input_path(file: String) -> Result<PathBuf, ErrorMessage> {
+    /// Shell expands a path and normalize it to an absolute path.
+    fn expand_path(file: String) -> Result<PathBuf, ErrorMessage> {
         let expanded = match shellexpand::full(&file) {
             Ok(x) => x,
             Err(e) => {
@@ -254,9 +268,3 @@ impl Run {
         }
     }
 }
-
-// If no output path was specified,
-// it will be determined depending on the input path: The output will be placed in the same
-// folder and with `-ironed` as suffix. The function also creates a temporary folder for the
-// file operations and copies the input PDF file into this location as `input.pdf`.
-//

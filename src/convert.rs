@@ -68,7 +68,7 @@ pub fn prepare_for_tesseract<'a>(
     }
     run.log_step("Converting images for Tesseract input");
 
-    let input_files = run.image_files(match disable_unpaper {
+    let input_files = run.query_files(match disable_unpaper {
         true => "a_",
         false => "b_",
     })?;
